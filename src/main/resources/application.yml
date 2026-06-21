@@ -1,0 +1,49 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+file:
+  upload:
+    path: D:/campus-rental/uploads/  # Windows路径示例
+  access:
+    path: /uploads/  # URL访问路径
+
+#mybatis-plus:
+#  global-config:
+#    db-config:
+#      logic-delete-field: ''
+#  configuration:
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+spring:
+  # 数据源配置
+  datasource:
+    # 1. 指定数据源类型为 Druid
+    type: com.alibaba.druid.pool.DruidDataSource
+    # 2. Druid 驱动（虽然 Druid 会自动识别，但建议指定）
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 3. 基本连接信息
+    url: jdbc:mysql://localhost:3306/campus_rent?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 88888888
+
+    # 4. Druid 连接池配置（可选，默认值通常够用）
+    druid:
+      # 初始化连接数
+      initial-size: 5
+      # 最小连接数
+      min-idle: 5
+      # 最大连接数
+      max-active: 20
+      # 获取连接超时时间(毫秒)
+      max-wait: 60000
+
+jwt:
+  secret: "BJo+JO91Wk8ZTKy4DMMmlpN5fBvpRadypqEcryA1wQ8="
+  expiration: 86400000  # 24小时
+
+# 日志配置
+logging:
+  level:
+    com.suse.www.campus_rent: DEBUG
+    org.springframework.security: DEBUG

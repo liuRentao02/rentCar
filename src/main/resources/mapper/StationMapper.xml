@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.suse.campus_rent.mapper.StationMapper">
+
+    <!-- 分页查询服务站 -->
+    <select id="selectStationPage" resultType="com.suse.campus_rent.entity.Station">
+        SELECT * FROM station
+        <where>
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (name LIKE CONCAT('%', #{query.keyword}, '%')
+                OR address LIKE CONCAT('%', #{query.keyword}, '%'))
+            </if>
+            <if test="query.status != null">
+                AND status = #{query.status}
+            </if>
+        </where>
+        ORDER BY sort_order ASC, create_time DESC
+    </select>
+
+    <!-- 查询启用的服务站（仅ID、名称、地址） -->
+    <select id="selectActiveStations" resultType="com.suse.campus_rent.entity.Station">
+        SELECT id, name, address
+        FROM station
+        WHERE status = 1
+        ORDER BY sort_order
+    </select>
+
+</mapper>

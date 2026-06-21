@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.suse.campus_rent.mapper.ReviewMapper">
+
+    <!-- 分页查询评论列表 -->
+    <select id="selectReviewList" resultType="com.suse.campus_rent.vo.admin.ReviewListVO">
+        SELECT
+        r.id,
+        CONCAT(cm.brand_name, ' ', cm.model_name) AS vehicleInfo,
+        COALESCE(u.real_name, u.nickname, u.username) AS userName,
+        r.rating,
+        r.content,
+        r.images,
+        CASE WHEN r.images IS NOT NULL AND r.images != '' THEN TRUE ELSE FALSE END AS hasImage,
+        r.create_time AS createTime,
+        r.status,
+        r.order_id AS orderId
+        FROM review r
+        LEFT JOIN `order` o ON r.order_id = o.id
+        LEFT JOIN car_info c ON o.car_id = c.car_id
+        LEFT JOIN car_models cm ON c.model_id = cm.model_id
+        LEFT JOIN user u ON r.user_id = u.id
+        <!-- 关键词搜索 -->
+        <if test="query.keyword != null and query.keyword != ''">
+            AND (
+            cm.brand_name LIKE CONCAT('%', #{query.keyword}, '%')
+            OR cm.model_name LIKE CONCAT('%', #{query.keyword}, '%')
+            OR r.content LIKE CONCAT('%', #{query.keyword}, '%')
+            OR u.real_name LIKE CONCAT('%', #{query.keyword}, '%')
+            OR u.nickname LIKE CONCAT('%', #{query.keyword}, '%')
+            OR u.username LIKE CONCAT('%', #{query.keyword}, '%')
+            )
+        </if>
+        <!-- 星级筛选 -->
+        <if test="query.rating != null">
+            AND r.rating = #{query.rating}
+        </if>
+        <!-- 状态筛选 -->
+        <if test="query.status != null">
+            AND r.status = #{query.status}
+        </if>
+        <!-- 类型筛选（汽车/非机动车）示例：汽车评论只显示有关联 car_id 的，非机动车显示无关联 car_id 的 -->
+        <if test="query.type == 'car'">
+            AND c.car_id IS NOT NULL
+        </if>
+        <if test="query.type == 'noncar'">
+            AND c.car_id IS NULL
+        </if>
+        <!-- 时间范围 -->
+        <if test="query.startTime != null">
+            AND r.create_time >= #{query.startTime}
+        </if>
+        <if test="query.endTime != null">
+            AND r.create_time &lt;= #{query.endTime}
+        </if>
+        ORDER BY r.create_time DESC
+    </select>
+
+    <!-- 查询评论详情 -->
+    <select id="selectReviewDetail" resultType="com.suse.campus_rent.vo.admin.ReviewDetailVO">
+        SELECT r.id,
+               CONCAT(cm.brand_name, ' ', cm.model_name)     AS vehicleInfo,
+               COALESCE(u.real_name, u.nickname, u.username) AS userName,
+               u.iphone                                      AS userPhone,
+               r.rating,
+               r.content,
+               r.images,
+               r.create_time                                 AS createTime,
+               r.status,
+               r.order_id                                    AS orderId,
+               o.order_no                                    AS orderNo,
+               r.likes_count                                 AS likesCount,
+               r.comments_count                              AS commentsCount,
+               r.featured
+        FROM review r
+                 LEFT JOIN `order` o ON r.order_id = o.id
+                 LEFT JOIN car_info c ON o.car_id = c.car_id
+                 LEFT JOIN car_models cm ON c.model_id = cm.model_id
+                 LEFT JOIN user u ON r.user_id = u.id
+        WHERE r.id = #{id}
+    </select>
+</mapper>

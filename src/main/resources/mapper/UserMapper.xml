@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.suse.campus_rent.mapper.UserMapper">
+    <select id="selectLatestUsersWithCert" resultType="java.util.HashMap">
+        SELECT
+        u.avatar,
+        u.real_name AS realName,
+        u.iphone AS phone,
+        uc.student_id AS studentId, -- 从认证表获取学号
+        IFNULL(uc.status, -1) AS authStatus,
+        CASE IFNULL(uc.status, -1)
+        WHEN 0 THEN 'warning'
+        WHEN 1 THEN 'success'
+        WHEN 2 THEN 'danger'
+        ELSE 'info'
+        END AS authType,
+        DATE_FORMAT(u.create_time, '%Y-%m-%d %H:%i:%s') AS registerTime
+        FROM user u
+        LEFT JOIN user_certification uc ON u.id = uc.user_id AND uc.cert_type = 'student'
+        ORDER BY u.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectProfile" resultType="com.suse.campus_rent.vo.app.ProfileVO">
+        select
+        u.avatar,
+        u.username,
+        u.role,
+        u.total_rentals,
+        u.total_mileage,
+        u.points,
+        u.balance,
+        u.real_name,
+        u.iphone,
+        u.email,
+        u.driving_license
+        from user u
+        where id = #{id};
+    </select>
+</mapper>

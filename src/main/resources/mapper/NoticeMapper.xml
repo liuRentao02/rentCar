@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.suse.campus_rent.mapper.NoticeMapper">
+
+    <resultMap id="NoticeListVOMap" type="com.suse.campus_rent.vo.admin.NoticeListVO">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="type" property="type"/>
+        <result column="status" property="status"/>
+        <result column="priority" property="priority"/>
+        <result column="publisher_name" property="publisher"/>
+        <result column="publish_time" property="publishTime"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="scheduled_time" property="scheduledTime"/>
+        <result column="expire_time" property="expireTime"/>
+    </resultMap>
+
+    <select id="selectNoticeList" resultMap="NoticeListVOMap">
+        SELECT
+        n.id,
+        n.title,
+        n.content,
+        n.type,
+        n.status,
+        n.priority,
+        n.publisher_name,
+        n.publish_time,
+        n.view_count,
+        n.expire_time,
+        n.scheduled_time
+        FROM notice n
+        <where>
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (n.title LIKE CONCAT('%', #{query.keyword}, '%') OR n.content LIKE CONCAT('%', #{query.keyword},
+                '%'))
+            </if>
+            <if test="query.type != null and query.type != ''">
+                AND n.type = #{query.type}
+            </if>
+            <if test="query.status != null and query.status != ''">
+                AND n.status = #{query.status}
+            </if>
+            <if test="query.publishDate != null and query.publishDate != ''">
+                AND DATE(n.publish_time) = #{query.publishDate}
+            </if>
+        </where>
+        ORDER BY n.publish_time DESC, n.create_time DESC
+    </select>
+
+    <select id="selectPublishedNotices" resultType="com.suse.campus_rent.entity.Notice">
+        <![CDATA[
+    SELECT
+        n.id,
+        n.title,
+        LEFT(n.content, 200) AS content,
+        n.type,
+        n.priority,
+        n.publish_time,
+        n.view_count,
+        CASE WHEN u.id IS NOT NULL THEN '已读' ELSE '未读' END AS status
+    FROM notice n
+    LEFT JOIN user_notice_read u
+        ON n.id = u.notice_id
+        AND u.user_id = #{query.id}
+        AND u.delete_time IS NULL   -- 只关联未删除的阅读记录
+    WHERE
+       n.status = 'published'
+      AND (n.expire_time IS NULL OR n.expire_time >= NOW())
+      AND (n.publish_time IS NULL OR n.publish_time <= NOW())
+      -- 关键：排除用户已经软删除的公告
+      AND NOT EXISTS (
+          SELECT 1 FROM user_notice_read del
+          WHERE del.user_id = #{query.id}
+            AND del.notice_id = n.id
+            AND del.delete_time IS NOT NULL
+      )
+    ]]>
+        <if test="query.keyword != null and query.keyword != ''">
+            AND (n.title LIKE CONCAT('%', #{query.keyword}, '%') OR n.content LIKE CONCAT('%', #{query.keyword}, '%'))
+        </if>
+        <if test="query.type != null and query.type != ''">
+            AND n.type = #{query.type}
+        </if>
+        ORDER BY n.priority DESC, n.publish_time DESC, n.create_time DESC
+    </select>
+
+</mapper>

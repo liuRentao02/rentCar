@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.suse.campus_rent.mapper.RoleBenefitsMapper">
+
+    <!-- 分页查询角色福利 -->
+    <select id="selectRoleBenefitsPage" resultType="com.suse.campus_rent.entity.RoleBenefits">
+        SELECT * FROM role_benefits
+        <where>
+            <if test="query.role != null and query.role != ''">
+                AND role LIKE CONCAT('%', #{query.role}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>

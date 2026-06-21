@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.suse.campus_rent.mapper.CarInfoMapper">
+
+    <!-- 分页查询车辆列表 -->
+    <select id="selectCarInfoList" resultType="com.suse.campus_rent.vo.admin.CarInfoVO">
+        SELECT
+        ci.car_id,
+        ci.model_id,
+        ci.plate_number,
+        ci.vin_code,
+        ci.vehicle_color,
+        ci.current_mileage,
+        ci.current_fuel,
+        ci.daily_rent,
+        ci.deposit_amount,
+        ci.rental_count,
+        ci.insurance_expiry,
+        ci.status,
+        ci.image_urls,
+        ci.image_urls AS image,
+        cm.model_name,
+        cm.brand_name,
+        cm.energy_type
+        FROM car_info ci
+        LEFT JOIN car_models cm ON ci.model_id = cm.model_id
+        <where>
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (ci.plate_number LIKE CONCAT('%', #{query.keyword}, '%')
+                OR ci.vin_code LIKE CONCAT('%', #{query.keyword}, '%'))
+            </if>
+            <if test="query.brand != null and query.brand != ''">
+                AND cm.brand_name = #{query.brand}
+            </if>
+            <if test="query.energyType != null and query.energyType != ''">
+                AND cm.energy_type = #{query.energyType}
+            </if>
+            <if test="query.status != null and query.status != ''">
+                AND ci.status = #{query.status}
+            </if>
+        </where>
+        ORDER BY ci.create_time DESC
+    </select>
+
+
+    <!-- 查询车辆详情 -->
+    <select id="selectCarInfoDetail" resultType="com.suse.campus_rent.vo.admin.CarInfoDetailVO">
+        SELECT ci.car_id,
+               ci.model_id,
+               ci.plate_number,
+               ci.vin_code,
+               ci.engine_no,
+               ci.vehicle_color,
+               ci.shop_id,
+               ci.current_mileage,
+               ci.current_fuel,
+               ci.license_date,
+               ci.insurance_expiry,
+               ci.inspection_expiry,
+               ci.daily_rent,
+               ci.deposit_amount,
+               ci.rental_count,
+               ci.status,
+               ci.image_urls,
+
+               cm.model_name,
+               cm.series_name,
+               cm.brand_name,
+               cm.category,
+               cm.energy_type,
+               cm.gearbox_type,
+               cm.drive_mode,
+               cm.seat_count,
+               cm.sunroof_type,
+               cm.interior_color,
+               cm.displacement,
+               cm.fuel_grade,
+               cm.emission_standard
+
+        FROM car_info ci
+                 LEFT JOIN car_models cm ON ci.model_id = cm.model_id
+        WHERE ci.car_id = #{carId}
+    </select>
+
+    <select id="selectHotCarsByOrders" resultType="com.suse.campus_rent.vo.app.CarVO">
+        SELECT ci.car_id,
+               ci.image_urls,
+               ci.daily_rent,
+               cm.brand_name,
+               cm.category,
+               cm.energy_type,
+               cm.displacement,
+               cm.seat_count,
+               cm.gearbox_type
+        FROM car_info ci
+                 INNER JOIN `order` o ON ci.car_id = o.car_id
+                 LEFT JOIN car_models cm ON ci.model_id = cm.model_id
+        WHERE o.status IN ('completed', 'success')
+        GROUP BY ci.car_id, ci.image_urls, ci.daily_rent, cm.brand_name, cm.category, cm.energy_type, cm.displacement,
+                 cm.seat_count, cm.gearbox_type
+        ORDER BY COUNT(o.id) DESC
+        LIMIT 10
+    </select>
+
+    <select id="selectHotCars" resultType="com.suse.campus_rent.vo.app.CarVO">
+        SELECT ci.car_id,
+               ci.image_urls,
+               ci.daily_rent,
+               cm.brand_name,
+               cm.category,
+               cm.energy_type,
+               cm.displacement,
+               cm.seat_count,
+               cm.gearbox_type
+        FROM car_info ci
+                 LEFT JOIN car_models cm ON ci.model_id = cm.model_id
+        WHERE ci.status = 'available'
+        ORDER BY RAND()
+        LIMIT 10
+    </select>
+
+    <select id="selectNewCars" resultType="com.suse.campus_rent.vo.app.CarVO">
+        SELECT
+        ci.car_id,
+        ci.image_urls,
+        ci.daily_rent,
+        cm.brand_name,
+        cm.category,
+        cm.energy_type,
+        cm.displacement,
+        cm.seat_count,
+        cm.gearbox_type
+        FROM car_info ci
+        LEFT JOIN car_models cm ON ci.model_id = cm.model_id
+        WHERE ci.status = 'available'    <!-- 可选：只展示可租用的车 -->
+        ORDER BY ci.create_time DESC
+        LIMIT 10
+    </select>
+
+    <!-- CarInfoMapper.xml -->
+    <select id="selectHotVehicles" resultType="com.suse.campus_rent.vo.admin.VehicleHotVO">
+        SELECT ci.car_id       AS carId,
+               ci.plate_number AS plateNumber,
+               cm.brand_name   AS brandName,
+               cm.model_name   AS modelName,
+               ci.daily_rent   AS dailyRent,
+               COUNT(o.id)     AS orderCount
+        FROM car_info ci
+                 LEFT JOIN car_models cm ON ci.model_id = cm.model_id
+                 INNER JOIN `order` o ON o.car_id = ci.car_id
+        WHERE o.status = '已完成'
+        GROUP BY ci.car_id
+        ORDER BY orderCount DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- CarInfoMapper.xml -->
+    <select id="selectVehicleStatistics" resultType="com.suse.campus_rent.vo.admin.VehicleDetailVO">
+        SELECT CONCAT(cm.brand_name, ' ', cm.model_name) AS model,
+               COUNT(o.id)                               AS rentalCount,
+               COALESCE(SUM(o.total_amount), 0)          AS totalRevenue,
+               COALESCE(AVG(ci.daily_rent), 0)           AS avgDailyRent
+        FROM car_models cm
+                 LEFT JOIN car_info ci ON ci.model_id = cm.model_id
+                 LEFT JOIN `order` o ON o.car_id = ci.car_id
+            AND o.status = '已完成'
+        GROUP BY cm.model_id
+        ORDER BY rentalCount DESC
+    </select>
+
+
+    <!-- App端：多条件组合筛选分页查询 image,-->
+    <select id="selectCarLists" resultType="com.suse.campus_rent.vo.app.CarVO">
+        SELECT
+        ci.car_id,
+        cm.brand_name,
+        ci.image_urls,
+        cm.category,
+        ci.daily_rent,
+        cm.energy_type,
+        cm.displacement,
+        cm.seat_count,
+        cm.gearbox_type
+        FROM car_info ci
+        LEFT JOIN car_models cm ON ci.model_id = cm.model_id
+        WHERE ci.status = 'available'
+
+        <!-- 关键词搜索 -->
+        <if test="query.keyword != null and query.keyword != ''">
+            AND (
+            ci.plate_number LIKE CONCAT('%', #{query.keyword}, '%') OR
+            cm.brand_name LIKE CONCAT('%', #{query.keyword}, '%') OR
+            cm.model_name LIKE CONCAT('%', #{query.keyword}, '%')
+            )
+        </if>
+        ORDER BY ci.create_time DESC
+    </select>
+
+    <select id="selectCarDetailApp" resultType="com.suse.campus_rent.vo.app.CarDetailVO">
+        SELECT ci.car_id,
+               ci.image_urls,
+               cm.model_name,
+               CONCAT(cm.brand_name, ' ', IFNULL(cm.category, ''), ' / ', cm.energy_type) AS subtitle,
+               ci.daily_rent,
+               ci.deposit_amount,
+               cm.energy_type,
+               cm.gearbox_type,
+               cm.drive_mode,
+               cm.seat_count,
+               cm.displacement,
+               ci.vehicle_color,
+               ci.current_mileage
+        FROM car_info ci
+                 LEFT JOIN car_models cm ON ci.model_id = cm.model_id
+        WHERE ci.car_id = #{id}
+    </select>
+
+
+</mapper>

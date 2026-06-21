@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.suse.campus_rent.mapper.MaintenanceRecordMapper">
+
+    <select id="selectMaintenanceList" resultType="com.suse.campus_rent.vo.admin.MaintenanceRecordVO">
+        SELECT
+        mr.id,
+        ci.plate_number AS plate,
+        cm.model_name AS model,
+        mr.maintenance_item AS maintenanceItem,
+        mr.cost,
+        mr.maintenance_date AS maintenanceDate,
+        mr.vehicle_id AS vehicleId,
+        mr.status,
+        mr.remarks
+        FROM maintenance_record mr
+        LEFT JOIN car_info ci ON mr.vehicle_id = ci.car_id
+        LEFT JOIN car_models cm ON ci.model_id = cm.model_id
+        <if test="query.plate != null and query.plate != ''">
+            AND ci.plate_number LIKE CONCAT('%', #{query.plate}, '%')
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND mr.status = #{query.status}
+        </if>
+        <if test="query.dateStart != null">
+            AND mr.maintenance_date >= #{query.dateStart}
+        </if>
+        <if test="query.dateEnd != null">
+            AND mr.maintenance_date &lt;= #{query.dateEnd}
+        </if>
+        ORDER BY mr.maintenance_date DESC, mr.create_time DESC
+    </select>
+</mapper>

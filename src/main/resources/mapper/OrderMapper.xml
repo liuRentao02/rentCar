@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.suse.campus_rent.mapper.OrderMapper">
+
+    <select id="selectOrderList" resultType="com.suse.campus_rent.vo.admin.OrderVO">
+        SELECT
+        o.id,
+        o.order_no AS orderNo,
+        o.contact_name AS userName,
+        o.contact_phone AS userPhone,
+        CONCAT_WS(' ', cm.brand_name, cm.series_name) AS vehicleName,
+        c.plate_number AS plate,
+        CONCAT(
+        DATE_FORMAT(o.rent_start_time, '%Y-%m-%d %H:%i'),
+        ' ~ ',
+        DATE_FORMAT(o.rent_end_time, '%Y-%m-%d %H:%i')
+        ) AS rentalPeriod,
+        o.total_days AS days,
+        o.total_amount AS amount,
+        o.status
+        FROM `order` o
+        LEFT JOIN car_info c ON o.car_id = c.car_id
+        LEFT JOIN car_models cm ON c.model_id = cm.model_id
+        <where>
+            <if test="query.orderNo != null and query.orderNo != ''">
+                AND o.order_no LIKE CONCAT('%', #{query.orderNo}, '%')
+            </if>
+            <if test="query.userInfo != null and query.userInfo != ''">
+                AND (o.contact_name LIKE CONCAT('%', #{query.userInfo}, '%') OR o.contact_phone LIKE CONCAT('%',
+                #{query.userInfo}, '%'))
+            </if>
+            <if test="query.status != null and query.status != ''">
+                AND o.status = #{query.status}
+            </if>
+            <if test="query.startDate != null">
+                AND DATE(o.create_time) >= #{query.startDate}
+            </if>
+            <if test="query.endDate != null">
+                AND DATE(o.create_time) &lt;= #{query.endDate}
+            </if>
+        </where>
+        ORDER BY o.create_time DESC
+    </select>
+
+    <select id="selectStatistics" resultType="java.util.Map">
+        SELECT COUNT(*)                                           AS allCount,
+               SUM(CASE WHEN status = '待支付' THEN 1 ELSE 0 END) AS pendingPayment,
+               SUM(CASE WHEN status = '已支付' THEN 1 ELSE 0 END) AS paid,
+               SUM(CASE WHEN status = '待取车' THEN 1 ELSE 0 END) AS pendingPickup,
+               SUM(CASE WHEN status = '租赁中' THEN 1 ELSE 0 END) AS renting,
+               SUM(CASE WHEN status = '待还车' THEN 1 ELSE 0 END) AS pendingReturn,
+               SUM(CASE WHEN status = '已完成' THEN 1 ELSE 0 END) AS completed,
+               SUM(CASE WHEN status = '已取消' THEN 1 ELSE 0 END) AS cancelled,
+               SUM(CASE WHEN status = '异常' THEN 1 ELSE 0 END)   AS abnormal
+        FROM `order`
+    </select>
+
+    <select id="selectLatestOrdersWithUserAndCar" resultType="java.util.HashMap">
+        SELECT o.order_no                                      AS orderNo,
+               u.real_name                                     AS userName,
+               CONCAT_WS(' ', cm.brand_name, cm.series_name)   AS vehicleName,
+               o.total_amount                                  AS amount,
+               o.status,
+               CASE o.status
+                   WHEN 'pending' THEN 'warning'
+                   WHEN 'paid' THEN 'success'
+                   WHEN 'picked_up' THEN 'primary'
+                   WHEN 'returned' THEN 'info'
+                   WHEN 'cancelled' THEN 'danger'
+                   ELSE 'info'
+                   END                                         AS statusType,
+               DATE_FORMAT(o.create_time, '%Y-%m-%d %H:%i:%s') AS createTime
+        FROM `order` o
+                 LEFT JOIN user u ON o.user_id = u.id
+                 LEFT JOIN car_info c ON o.car_id = c.car_id
+                 LEFT JOIN car_models cm ON c.model_id = cm.model_id
+        ORDER BY o.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectOverdueOrderCount" resultType="int">
+        SELECT COUNT(*)
+        FROM `order`
+        WHERE status IN ('paid', 'picked_up')
+    <![CDATA[
+          AND rent_end_time < now()
+        ]]>
+    </select>
+</mapper>
